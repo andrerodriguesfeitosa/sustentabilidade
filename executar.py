@@ -29,8 +29,8 @@ imagem_sim = cv2.imread("sim.png")
 imagem_nao = cv2.imread("nao.png")
 
 # Redimensiona as imagens (ajuste os valores de largura e altura conforme necessário)
-imagem_sim = cv2.resize(imagem_sim, (100, 100))
-imagem_nao = cv2.resize(imagem_nao, (100, 100))
+imagem_sim = cv2.resize(imagem_sim, (120, 55))
+imagem_nao = cv2.resize(imagem_nao, (120, 55))
 
 # Pontos dos olhos e boca
 p_olho_esq = [385, 380, 387, 373, 362, 263]
@@ -70,8 +70,8 @@ def sobrepor_imagem(frame, imagem, face, escala=1):
     face = np.array([[coord.x, coord.y] for coord in face])
     pontos_testas = face[p_olhos]
     
-    # Ajuste para posição mais alta (teste)
-    centro_testas = np.mean(pontos_testas, axis=0) - [0.2, 0.2]  # Move a posição para cima
+    # Ajuste para posição mais alta
+    centro_testas = np.mean(pontos_testas, axis=0) - [0.2, 0.3]  # Move a posição para cima
     
     # Posição da imagem na testa
     y, x = int(centro_testas[1] * frame.shape[0]), int(centro_testas[0] * frame.shape[1])
@@ -99,17 +99,22 @@ def sobrepor_imagem(frame, imagem, face, escala=1):
 # Lista de perguntas e respostas sobre sustentabilidade
 # -*- coding: utf-8 -*-
 perguntas_respostas = [
-    ("Queimar o lixo", "Não"),
-    ("Separar lixo reciclavel", "Sim"),
-    ("Banho de 2h", "Não"),
-    ("Produtos organicos?", "Sim"),
-    ("Fazer queimadas", "Não"),
-    ("Plantar arvores", "Sim"),
-    ("Embalagens plasticas", "Não"),
-    ("Coleta seletiva", "Sim")
+    ("Gosta de gastar muita agua?", "Não"),
+    ("Gosta de usar sacolas reutilizaveis?", "Sim"),
+    ("Gosta de jogar lixo na rua?", "Não"),
+    ("Gosta de reutilizar papeis?", "Sim"),
+    ("Gosta de poluir rios e lagos?", "Não"),
+    ("Gosta de economizar energia?", "Sim"),
+    ("Gosta de desmatar florestas?", "Não"),
+    ("Gosta de reciclar latas de aluminio?", "Sim"),
+    ("Gosta de usar pesticidas sem controle?", "Não"),
+    ("Gosta de conservar a biodiversidade?", "Sim")
 ]
 
+
 # Função para obter uma pergunta aleatória e sua resposta
+pergunta = ""
+resposta = ""
 def pergunta_aleatoria():
     pergunta, resposta = random.choice(perguntas_respostas)
     return pergunta, resposta
@@ -119,7 +124,7 @@ def pergunta_aleatoria():
 ear_limiar = 0.27
 mar_limiar = 0.35 
 dormindo = 0
-cont = 1
+
 
 # Inicializa a câmera
 cap = cv2.VideoCapture(0)
@@ -136,6 +141,9 @@ ultimo_tempo_audio = time.time()
 # Estado do jogo
 jogo_rodando = False
 mao = "nada"
+cont = 1
+
+margem = 0
 
 
 with mp_face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_confidence=0.5) as facemesh, mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.5) as hands:
@@ -164,15 +172,15 @@ with mp_face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_confidence
             if not jogo_rodando:
 
                 # Dimensões do retângulo preto
-                faixa_altura = 50  # Altura da faixa preta
+                faixa_altura = 80  # Altura da faixa preta
                 faixa_cor = (0, 0, 0)  # Cor preta (BGR)
 
                 # Desenha o retângulo preto no topo do frame
                 frame[:faixa_altura, :] = faixa_cor
 
                 # Texto que será exibido sobre a faixa preta
-                texto = "Abra a boca para iniciar o jogo"
-                posicao = (50, 30)  # Posição do texto dentro da faixa
+                texto = "Abra a boca para iniciar"
+                posicao = (130, 50)  # Posição do texto dentro da faixa
                 fonte = cv2.FONT_HERSHEY_DUPLEX
                 tamanho_fonte = 0.9
                 espessura = 2
@@ -230,7 +238,7 @@ with mp_face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_confidence
 
                 # Verifica se a boca está aberta
                 if mar > mar_limiar and not jogo_rodando:
-                    cv2.putText(frame, "Iniciando o jogo...", (100, 100),
+                    cv2.putText(frame, "Iniciando...", (150, 150),
                                 cv2.FONT_HERSHEY_DUPLEX,
                                 1.5, (0, 0, 0), 2)
                     jogo_rodando = True
@@ -241,7 +249,7 @@ with mp_face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_confidence
 
         # Detecção de mãos
 
-        if saida_hands.multi_hand_landmarks:
+        if jogo_rodando == True and saida_hands.multi_hand_landmarks:
             for hand_landmarks in saida_hands.multi_hand_landmarks:
                 # Extrai a coordenada x da landmark do pulso (landmark 0)
                 wrist = hand_landmarks.landmark[mp_hands.HandLandmark.WRIST]
@@ -266,16 +274,24 @@ with mp_face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_confidence
             print(f"Pergunta: {pergunta}")
             print(f"Resposta: {resposta}")
 
+            # Centralizar a pergunta
+            if len(pergunta) <= 27:
+                margem = 110
+            else:
+                margem = 35
+
+            print(margem)
+
 
             # Dimensões do retângulo preto
-            faixa_altura = 100  # Altura da faixa preta
+            faixa_altura = 80  # Altura da faixa preta
             faixa_cor = (0, 0, 0)  # Cor preta (BGR)
 
             # Desenha o retângulo preto no topo do frame
             frame[:faixa_altura, :] = faixa_cor
 
             # Texto que será exibido sobre a faixa preta
-            posicao = (50, 30)  # Posição do texto dentro da faixa
+            posicao = (margem, 45)  # Posição do texto dentro da faixa
             fonte = cv2.FONT_HERSHEY_DUPLEX
             tamanho_fonte = 0.9
             espessura = 2
@@ -288,10 +304,10 @@ with mp_face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_confidence
                 print("continua")
 
                 # Calcula a posição das imagens (ajuste as coordenadas conforme necessário)
-                x_sim = 50
-                y_sim = 250
-                x_nao = largura - 150  # largura é a largura da imagem original
-                y_nao = 250
+                x_sim = 0
+                y_sim = 240
+                x_nao = largura - 120  # largura é a largura da imagem original
+                y_nao = 240
                 
 
                 # Sobrepõe as imagens à imagem original
@@ -313,7 +329,9 @@ with mp_face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_confidence
 
                     cont += 1
             
-            if cont >= 15: #determina o tempo para recomecar o jogo depois de uma resposta.
+            if cont >= 15: #determina o tempo para recomecar o jogo depois de uma resposta e resta as variavéis.
+                cont = 1
+                mao = "nada"
                 jogo_rodando = False
 
         # Exibe o frame
