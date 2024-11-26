@@ -97,7 +97,6 @@ def sobrepor_imagem(frame, imagem, face, escala=1):
 
 
 # Lista de perguntas e respostas sobre sustentabilidade
-# -*- coding: utf-8 -*-
 perguntas_respostas = [
     ("Gosta de gastar muita agua?", "Não"),
     ("Gosta de usar sacolas reutilizaveis?", "Sim"),
@@ -112,12 +111,9 @@ perguntas_respostas = [
 ]
 
 
-# Função para obter uma pergunta aleatória e sua resposta
+# variaveis pergunta aleatória e sua resposta
 pergunta = ""
 resposta = ""
-def pergunta_aleatoria():
-    pergunta, resposta = random.choice(perguntas_respostas)
-    return pergunta, resposta
 
 
 # Limiares
@@ -142,11 +138,14 @@ ultimo_tempo_audio = time.time()
 jogo_rodando = False
 mao = "nada"
 cont = 1
+jogadas = 0
 
+acertos = 0
+erros = 0
 margem = 0
 
 
-with mp_face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_confidence=0.5) as facemesh, mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.5) as hands:
+with mp_face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_confidence=0.5) as facemesh, mp_hands.Hands(min_detection_confidence=0.9, min_tracking_confidence=0.4) as hands:
     while cap.isOpened():
         sucesso, frame = cap.read()
         if not sucesso:
@@ -168,26 +167,30 @@ with mp_face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_confidence
         if saida_facemesh.multi_face_landmarks:
             print("Rosto detectado")
 
-
             if not jogo_rodando:
 
-                # Dimensões do retângulo preto
-                faixa_altura = 80  # Altura da faixa preta
-                faixa_cor = (0, 0, 0)  # Cor preta (BGR)
+                if jogadas == 0:
+        
+                    # gerando a pergunta aleatória
+                    pergunta, resposta = random.choice(perguntas_respostas)
 
-                # Desenha o retângulo preto no topo do frame
-                frame[:faixa_altura, :] = faixa_cor
+                    # Dimensões do retângulo preto
+                    faixa_altura = 80  # Altura da faixa preta
+                    faixa_cor = (0, 0, 0)  # Cor preta (BGR)
 
-                # Texto que será exibido sobre a faixa preta
-                texto = "Abra a boca para iniciar"
-                posicao = (130, 50)  # Posição do texto dentro da faixa
-                fonte = cv2.FONT_HERSHEY_DUPLEX
-                tamanho_fonte = 0.9
-                espessura = 2
-                cor_fonte = (255, 255, 255)  # Cor do texto (branca)
+                    # Desenha o retângulo preto no topo do frame
+                    frame[:faixa_altura, :] = faixa_cor
 
-                # Adiciona o texto na faixa preta
-                cv2.putText(frame, texto, posicao, fonte, tamanho_fonte, cor_fonte, espessura)
+                    # Texto que será exibido sobre a faixa preta
+                    texto = "Abra a boca para iniciar"
+                    posicao = (130, 50)  # Posição do texto dentro da faixa
+                    fonte = cv2.FONT_HERSHEY_DUPLEX
+                    tamanho_fonte = 0.9
+                    espessura = 2
+                    cor_fonte = (255, 255, 255)  # Cor do texto (branca)
+
+                    # Adiciona o texto na faixa preta
+                    cv2.putText(frame, texto, posicao, fonte, tamanho_fonte, cor_fonte, espessura)
 
             
             tempo_atual = time.time()
@@ -206,9 +209,10 @@ with mp_face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_confidence
             pygame.mixer.music.stop()  # Para o som
             som_tocando = False  # Atualiza o estado para som parado
             jogo_rodando = False
-            
-            # Testando a função
-            pergunta, resposta = pergunta_aleatoria()
+            jogadas = 0
+
+        if jogadas >= 1 and jogadas <= 3:
+            jogo_rodando = True
 
         # Desenha os landmarks do rosto
         try:
@@ -237,7 +241,8 @@ with mp_face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_confidence
                 mar = calculo_mar(face, p_boca)
 
                 # Verifica se a boca está aberta
-                if mar > mar_limiar and not jogo_rodando:
+
+                if jogadas == 0 and mar > mar_limiar and not jogo_rodando:
                     cv2.putText(frame, "Iniciando...", (150, 150),
                                 cv2.FONT_HERSHEY_DUPLEX,
                                 1.5, (0, 0, 0), 2)
@@ -316,23 +321,84 @@ with mp_face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_confidence
 
             else:
                 if mao == resposta:
-                    print("ganhou")
+                    print("acertou")
                     # Exibe a imagem de "feliz"
                     sobrepor_imagem(frame, imagem_ganhou, face, escala=0.7)
+
+                    if cont == 1:
+                        acertos += 1
+                        jogadas += 1
+
+                    # Dimensões do retângulo preto
+                    faixa_altura = 80  # Altura da faixa preta
+                    faixa_cor = (0, 0, 0)  # Cor preta (BGR)
+
+                    # Desenha o retângulo preto no topo do frame
+                    frame[:faixa_altura, :] = faixa_cor
+
+                    # Texto que será exibido sobre a faixa preta
+                    texto = "Pergunta "+ str(jogadas) +"/3 - Acertos: "+ str(acertos) +" | Erros: "+ str(erros)
+                    posicao = (40, 50)  # Posição do texto dentro da faixa
+                    fonte = cv2.FONT_HERSHEY_DUPLEX
+                    tamanho_fonte = 0.9
+                    espessura = 2
+                    cor_fonte = (255, 255, 255)  # Cor do texto (branca)
+
+                    # Adiciona o texto na faixa preta
+                    cv2.putText(frame, texto, posicao, fonte, tamanho_fonte, cor_fonte, espessura)
 
                     cont += 1
 
                 else:
-                    print("perdeu")
+                    print("errou")
                     # Exibe a imagem de "triste"
                     sobrepor_imagem(frame, imagem_perdeu, face, escala=0.7)
 
+                    if cont == 1:
+                        erros += 1
+                        jogadas += 1
+
+                    # Dimensões do retângulo preto
+                    faixa_altura = 80  # Altura da faixa preta
+                    faixa_cor = (0, 0, 0)  # Cor preta (BGR)
+
+                    # Desenha o retângulo preto no topo do frame
+                    frame[:faixa_altura, :] = faixa_cor
+
+                    # Texto que será exibido sobre a faixa preta
+                    texto = "Pergunta "+ str(jogadas) +"/3 - Acertos: "+ str(acertos) +" | Erros: "+ str(erros)
+                    posicao = (40, 50)  # Posição do texto dentro da faixa
+                    fonte = cv2.FONT_HERSHEY_DUPLEX
+                    tamanho_fonte = 0.9
+                    espessura = 2
+                    cor_fonte = (255, 255, 255)  # Cor do texto (branca)
+
+                    # Adiciona o texto na faixa preta
+                    cv2.putText(frame, texto, posicao, fonte, tamanho_fonte, cor_fonte, espessura)
+
                     cont += 1
-            
-            if cont >= 15: #determina o tempo para recomecar o jogo depois de uma resposta e resta as variavéis.
-                cont = 1
-                mao = "nada"
+
+        if cont >= 35: #determina o tempo para recomecar o jogo depois de uma resposta e resta as variavéis.
+            cont = 1
+            mao = "nada"
+            jogo_rodando = False
+            pergunta, resposta = random.choice(perguntas_respostas)                    
+
+            if jogadas >= 3:
                 jogo_rodando = False
+                jogadas = 0
+                print("Iresultado")
+                print(acertos)
+                print(erros)
+                acertos = 0
+                erros = 0
+                    
+            else:
+                print("Eresultado")
+                print(acertos)
+                print(erros)
+                print(jogadas)
+            
 
         # Exibe o frame
         cv2.imshow('Camera', frame)
