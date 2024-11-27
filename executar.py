@@ -143,6 +143,7 @@ jogadas = 0
 acertos = 0
 erros = 0
 margem = 0
+reiniciar = True
 
 
 with mp_face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_confidence=0.5) as facemesh, mp_hands.Hands(min_detection_confidence=0.9, min_tracking_confidence=0.4) as hands:
@@ -210,6 +211,8 @@ with mp_face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_confidence
             som_tocando = False  # Atualiza o estado para som parado
             jogo_rodando = False
             jogadas = 0
+            acertos = 0
+            erros = 0            
 
         if jogadas >= 1 and jogadas <= 3:
             jogo_rodando = True
@@ -254,24 +257,33 @@ with mp_face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_confidence
 
         # Detecção de mãos
 
-        if jogo_rodando == True and saida_hands.multi_hand_landmarks:
+        if jogo_rodando and saida_hands.multi_hand_landmarks:
             for hand_landmarks in saida_hands.multi_hand_landmarks:
-                # Extrai a coordenada x da landmark do pulso (landmark 0)
+                # Extrai as coordenadas do pulso (landmark 0) e das pontas dos dedos
                 wrist = hand_landmarks.landmark[mp_hands.HandLandmark.WRIST]
-                
-                # Se a coordenada x do pulso for maior, é a mão direita (mais à direita na imagem)
-                if wrist.x > 0.5:  # Caso a coordenada x seja maior que 0.5, é a mão direita
-                    print("Mão Direita Detectada")
-                    # Aqui você pode desenhar ou fazer o que precisar com a mão direita
-                    mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS, 
-                                            landmark_drawing_spec=mp_drawing.DrawingSpec(color=(0, 255, 0), thickness=2))
-                    mao = "Não"
+                index_tip = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
+                pinky_tip = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_TIP]
+
+                # Verificar se a mão está apontada para cima (pulso abaixo das pontas dos dedos)
+                if wrist.y > index_tip.y and wrist.y > pinky_tip.y:
+                    # Determinar se é a mão direita ou esquerda
+                    if wrist.x > 0.5:  # Coordenada x do pulso maior que 0.5
+                        print("Mão Direita Apontada Para Cima")
+                        mp_drawing.draw_landmarks(
+                            frame, hand_landmarks, mp_hands.HAND_CONNECTIONS,
+                            landmark_drawing_spec=mp_drawing.DrawingSpec(color=(0, 255, 0), thickness=2)
+                        )
+                        mao = "Não"
+                    else:
+                        print("Mão Esquerda Apontada Para Cima")
+                        mp_drawing.draw_landmarks(
+                            frame, hand_landmarks, mp_hands.HAND_CONNECTIONS,
+                            landmark_drawing_spec=mp_drawing.DrawingSpec(color=(255, 0, 0), thickness=2)
+                        )
+                        mao = "Sim"
                 else:
-                    print("Mão Esquerda Detectada")
-                    # Aqui você pode desenhar ou fazer o que precisar com a mão esquerda
-                    mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS, 
-                                            landmark_drawing_spec=mp_drawing.DrawingSpec(color=(255, 0, 0), thickness=2))
-                    mao = "Sim"
+                    print("Mão Não Está Apontada Para Cima")
+
 
 
         if jogo_rodando:
@@ -378,20 +390,35 @@ with mp_face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_confidence
 
                     cont += 1
 
-        if cont >= 35: #determina o tempo para recomecar o jogo depois de uma resposta e resta as variavéis.
+        if cont >= 15: #determina o tempo para recomecar o jogo depois de uma resposta e resta as variavéis.
             cont = 1
             mao = "nada"
             jogo_rodando = False
             pergunta, resposta = random.choice(perguntas_respostas)                    
 
             if jogadas >= 3:
-                jogo_rodando = False
-                jogadas = 0
-                print("Iresultado")
-                print(acertos)
-                print(erros)
-                acertos = 0
-                erros = 0
+
+                while reiniciar:
+                    if acertos > erros:
+                        # Exibe a imagem de "triste"
+                        sobrepor_imagem(frame, imagem_ganhou, face, escala=0.7)
+                    else:
+                        # Exibe a imagem de "triste"
+                        sobrepor_imagem(frame, imagem_perdeu, face, escala=0.7)
+
+                    if cv2.waitKey(10) & 0xFF == ord('a'):  
+                        reiniciar = False
+                    
+                    if reiniciar == False :              
+                        jogo_rodando = False
+                        jogadas = 0
+                        print("Iresultado")
+                        print(acertos)
+                        print(erros)
+                        acertos = 0
+                        erros = 0
+
+                reiniciar = True
                     
             else:
                 print("Eresultado")
